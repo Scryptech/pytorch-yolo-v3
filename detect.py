@@ -40,6 +40,7 @@ def get_test_input(input_dim, CUDA):
     img_ = img_[np.newaxis,:,:,:]/255.0
     img_ = torch.from_numpy(img_).float()
     img_ = Variable(img_)
+    print("XXXX")
     
     if CUDA:
         img_ = img_.cuda()
@@ -97,7 +98,12 @@ def get_response():
 #        scale_indices = li
     result = []
     request_object = json.loads(request.get_data())
+
+    decodeStartTime = time.time()
     image_data = base64.b64decode(request_object['image'])
+    decodeEndTime = time.time()
+    decodeTotalTime = decodeEndTime - decodeStartTime
+    print("decodeTime",decodeTotalTime)
     filename = 'image.jpg'
     file = open(filename, 'wb')
     file.write(image_data)
@@ -165,7 +171,7 @@ def get_response():
 
     i = 0
     write = False
-    model(get_test_input(inp_dim, CUDA), CUDA)
+    #model(get_test_input(inp_dim, CUDA), CUDA)
     
     start_det_loop = time.time()
     
