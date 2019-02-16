@@ -95,15 +95,14 @@ def get_response():
 #            i = scale
 #        
 #        scale_indices = li
+    result = []
     request_object = json.loads(request.get_data())
     image_data = base64.b64decode(request_object['image'])
-    result = []
     filename = 'image.jpg'
     file = open(filename, 'wb')
     file.write(image_data)
 
     images = filename
-    print("IMAGES",images)
     batch_size = int(args.bs)
     confidence = float(args.confidence)
     nms_thesh = float(args.nms_thresh)
@@ -277,22 +276,22 @@ def get_response():
     output_recast = time.time()
     class_load = time.time()
 
-    colors = pkl.load(open("pallete", "rb"))
+    # colors = pkl.load(open("pallete", "rb"))
     
     draw = time.time()
 
     def write(x, batches, results):
         c1 = tuple(x[1:3].int())
         c2 = tuple(x[3:5].int())
-        img = results[int(x[0])]
+        # img = results[int(x[0])]
         cls = int(x[-1])
         label = "{0}".format(classes[cls])
-        color = random.choice(colors)
-        cv2.rectangle(img, c1, c2,color, 1)
-        t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1 , 1)[0]
-        c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
-        cv2.rectangle(img, c1, c2,color, -1)
-        cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1, [225,255,255], 1)
+        # color = random.choice(colors)
+        # cv2.rectangle(img, c1, c2,color, 1)
+        # t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1 , 1)[0]
+        # c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
+        # cv2.rectangle(img, c1, c2,color, -1)
+        # cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1, [225,255,255], 1)
         object = {
             'name' : label,
             'confidence' : str(np.float(x[5])),
@@ -302,16 +301,12 @@ def get_response():
             'h' : str(np.int64(c2[1]))
         }
         result.append(object)
-        return img
 
     list(map(lambda x: write(x, im_batches, orig_ims), output))
-    det_names = pd.Series(imlist).apply(lambda x: "{}/det_{}".format(args.det,x.split("/")[-1]))
-    list(map(cv2.imwrite, det_names, orig_ims))
-    
-    end = time.time()
- 
-    torch.cuda.empty_cache()
     return result
+    end = time.time()
+    
+    torch.cuda.empty_cache()
 
 #TODO make result local var
 @app.route('/detect', methods=['POST'])
@@ -326,4 +321,4 @@ if __name__ ==  '__main__':
     model = Darknet(args.cfgfile)
     model.load_weights(args.weightsfile)
     print("Network successfully loaded")
-    app.run(host='0.0.0.0', port=8006, threaded=True)
+    app.run(host='0.0.0.0', port=8008, threaded=True)
