@@ -32,6 +32,7 @@ class test_net(nn.Module):
         return fwd(x)
 
 num_classes = 80
+computeTime = 0
 app = Flask(__name__, static_url_path='')
 def get_test_input(input_dim, CUDA):
     img = cv2.imread("dog-cycle-car.png")
@@ -83,27 +84,12 @@ def arg_parse():
 
 def get_response():
 
-#        scales = [int(x) for x in scales.split(',')]    
-#        args.reso = int(args.reso)
-#        
-#        num_boxes = [args.reso//32, args.reso//16, args.reso//8]    
-#        scale_indices = [3*(x**2) for x in num_boxes]
-#        scale_indices = list(itertools.accumulate(scale_indices, lambda x,y : x+y))       
-#        li = []
-#        i = 0
-#        for scale in scale_indices:        
-#            li.extend(list(range(i, scale))) 
-#            i = scale
-#        
-#        scale_indices = li
+
     result = []
     request_object = json.loads(request.get_data())
 
-    decodeStartTime = time.time()
+    computeStartTime = time.time()
     image_data = base64.b64decode(request_object['image'])
-    decodeEndTime = time.time()
-    decodeTotalTime = decodeEndTime - decodeStartTime
-    print("decodeTime",decodeTotalTime)
     filename = 'image.jpg'
     file = open(filename, 'wb')
     file.write(image_data)
@@ -117,8 +103,6 @@ def get_response():
     CUDA = torch.cuda.is_available()
 
     classes = load_classes('data/coco.names') 
-
-   
     
     model.net_info["height"] = args.reso
     inp_dim = int(model.net_info["height"])
@@ -162,8 +146,7 @@ def get_response():
     
     if (len(im_dim_list) % batch_size):
         leftover = 1
-        
-        
+           
     if batch_size != 1:
         num_batches = len(imlist) // batch_size + leftover            
         im_batches = [torch.cat((im_batches[i*batch_size : min((i +  1)*batch_size,
@@ -176,8 +159,6 @@ def get_response():
     start_det_loop = time.time()
     
     objs = {}
-    
-    
     
     for batch in im_batches:
         #load the image 
@@ -195,8 +176,6 @@ def get_response():
             prediction = model(Variable(batch), CUDA)
         
 #        prediction = prediction[:,scale_indices]
-
-        
         #get the boxes with object confidence > threshold
         #Convert the cordinates to absolute coordinates
         #perform NMS on these boxes, and save the results 
@@ -206,31 +185,8 @@ def get_response():
         #loops are slower than vectorised operations. 
         
         prediction = write_results(prediction, confidence, num_classes, nms = True, nms_conf = nms_thesh)
-        # print("PREDICTION",prediction)
-        # # print(prediction[0][1])
-        # # print(prediction[0][2])
-        # # print(prediction[0][3])
-        # # print(prediction[0][4])
-        # x=0
-        # y=0
-        # w=0
-        # h=0
-        #result = []
-        # for i in prediction: 
-        #     x = i[1]
-        #     y = i[2]
-        #     w = i[3]
-        #     h = i[4]            
-        #     object = {
-        #         'x' : str(np.int64(i[1])),
-        #         'y' : str(np.int64(i[2])),
-        #         'w' : str(np.int64(i[3])),
-        #         'h' : str(np.int64(i[4]))
-        #     }
-        #     result.append(object)
-
-        # print(result)
-        
+       
+     
         if type(prediction) == int:
             i += 1
             continue
@@ -292,12 +248,6 @@ def get_response():
         # img = results[int(x[0])]
         cls = int(x[-1])
         label = "{0}".format(classes[cls])
-        # color = random.choice(colors)
-        # cv2.rectangle(img, c1, c2,color, 1)
-        # t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1 , 1)[0]
-        # c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
-        # cv2.rectangle(img, c1, c2,color, -1)
-        # cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1, [225,255,255], 1)
         object = {
             'name' : label,
             'confidence' : str(np.float(x[5])),
@@ -307,11 +257,14 @@ def get_response():
             'h' : str(np.int64(c2[1]))
         }
         result.append(object)
-
     list(map(lambda x: write(x, im_batches, orig_ims), output))
+    computeTime = time.time() - computeStartTime
+    object ={
+        'computeTime': str(computeTime)
+    }
+    result.append(object)
     return result
-    end = time.time()
-    
+    end = time.time() 
     torch.cuda.empty_cache()
 
 #TODO make result local var
