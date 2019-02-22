@@ -31,7 +31,7 @@ class test_net(nn.Module):
         fwd = nn.Sequential(self.linear_1, *self.middle, self.output)
         return fwd(x)
 
-num_classes = 80
+num_classes = 13
 computeTime = 0
 app = Flask(__name__, static_url_path='')
 def get_test_input(input_dim, CUDA):
